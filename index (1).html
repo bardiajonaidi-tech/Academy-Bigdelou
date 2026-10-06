@@ -1,0 +1,22 @@
+<!doctype html>
+<html lang="fa" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>تست سایت</title>
+<style>
+  body{font-family:system-ui,Tahoma,sans-serif;background:#edf2f1;color:#14201f;margin:0;padding:24px;display:grid;place-items:center;min-height:100vh;text-align:center}
+  .box{background:#fff;border-radius:16px;padding:28px 22px;max-width:360px;box-shadow:0 4px 18px rgba(0,0,0,.08)}
+  h1{margin:0 0 8px;font-size:22px;color:#0e6a62}
+  p{margin:6px 0;line-height:1.8}
+</style>
+</head>
+<body>
+  <div class="box">
+    <h1>سایت باز شد ✅</h1>
+    <p>اگر این صفحه را روی گوشی بدون VPN می‌بینی، مسیر رایگان برای شاگردهایت هم جواب می‌دهد.</p>
+    <p id="t"></p>
+  </div>
+  <script>document.getElementById('t').textContent='زمان باز شدن: '+new Date().toLocaleString('fa-IR');</script>
+</body>
+</html>

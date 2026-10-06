@@ -2,21 +2,53 @@
 <html lang="fa" dir="rtl">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>تست سایت</title>
-<style>
-  body{font-family:system-ui,Tahoma,sans-serif;background:#edf2f1;color:#14201f;margin:0;padding:24px;display:grid;place-items:center;min-height:100vh;text-align:center}
-  .box{background:#fff;border-radius:16px;padding:28px 22px;max-width:360px;box-shadow:0 4px 18px rgba(0,0,0,.08)}
-  h1{margin:0 0 8px;font-size:22px;color:#0e6a62}
-  p{margin:6px 0;line-height:1.8}
-</style>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>کلاس تنیس علیرضا بیگدلو · Alireza Bigdelou Tennis Coach</title>
+<meta name="description" content="کلاس تنیس خصوصی و گروهی با علیرضا بیگدلو: ساعت‌های خالی را ببینید، ثبت‌نام کنید و پرداخت‌ها را آنلاین پیگیری کنید. Private and group tennis classes with Alireza Bigdelou.">
+<meta name="robots" content="index,follow">
+<meta name="theme-color" content="#b8441a">
+<meta name="color-scheme" content="light dark">
+<meta property="og:type" content="website">
+<meta property="og:title" content="Alireza Bigdelou · Tennis Coach">
+<meta property="og:description" content="کلاس تنیس خصوصی و گروهی · Private and group tennis classes">
+<meta property="og:image" content="img/icon-512.png">
+<link rel="icon" type="image/png" href="img/favicon-64.png">
+<link rel="apple-touch-icon" href="img/apple-touch-icon.png">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;700&family=Lalezar&family=Vazirmatn:wght@400;500;600;700&display=swap">
+<link rel="stylesheet" href="style.css">
+<script type="application/ld+json">
+{"@context":"https://schema.org","@type":"Person","name":"Alireza Bigdelou","alternateName":"علیرضا بیگدلو","jobTitle":"Tennis Coach","description":"Private and group tennis classes / کلاس تنیس خصوصی و گروهی","knowsAbout":["Tennis","تنیس"]}
+</script>
 </head>
 <body>
-  <div class="box">
-    <h1>سایت باز شد ✅</h1>
-    <p>اگر این صفحه را روی گوشی بدون VPN می‌بینی، مسیر رایگان برای شاگردهایت هم جواب می‌دهد.</p>
-    <p id="t"></p>
+<div id="app">
+  <!-- Shown to search engines and until the app loads; replaced by the app -->
+  <div class="wrap">
+    <section class="hero">
+      <h1>کلاس تنیس با علیرضا بیگدلو</h1>
+      <p>کلاس تنیس خصوصی و گروهی. ساعت‌های خالی را ببینید، ثبت‌نام کنید و پرداخت‌ها را یک‌جا دنبال کنید.</p>
+      <p lang="en" dir="ltr">Alireza Bigdelou, tennis coach. Private and group tennis classes: see free hours, sign up, and follow your payments in one place.</p>
+    </section>
+    <noscript><p class="banner">برای استفاده از سایت، جاوااسکریپت را فعال کنید. · Please enable JavaScript.</p></noscript>
   </div>
-  <script>document.getElementById('t').textContent='زمان باز شدن: '+new Date().toLocaleString('fa-IR');</script>
+</div>
+<div id="toast" class="toast" role="status" aria-live="polite"></div>
+
+<script src="config.js"></script>
+<script>
+(function(){
+  var c = window.APP_CONFIG || {};
+  var ok = c.SUPABASE_URL && /^https:\/\/.+/.test(c.SUPABASE_URL) && c.SUPABASE_ANON_KEY && c.SUPABASE_ANON_KEY.indexOf('YOUR_') !== 0;
+  if (!ok){
+    document.getElementById('app').innerHTML = '<div class="wrap"><p class="banner" style="margin-top:20px" dir="ltr">Setup needed: open config.js and paste your Supabase Project URL and anon public key.</p></div>';
+    return;
+  }
+  function load(src, cb){ var s = document.createElement('script'); s.src = src; s.onload = cb; document.body.appendChild(s); }
+  load('api-supabase.js', function(){ load('app.js'); });
+  if ('serviceWorker' in navigator && location.protocol === 'https:') navigator.serviceWorker.register('sw.js').catch(function(){});
+})();
+</script>
 </body>
 </html>

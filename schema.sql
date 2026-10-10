@@ -185,6 +185,26 @@ create table if not exists public.closed_days (
   note text not null default ''
 );
 
+-- ---------- Sports (tennis / bodybuilding), working-hours range, chat ----
+alter table public.settings add column if not exists bands_body jsonb not null
+  default '[{"from":7,"to":12,"price":0},{"from":12,"to":22,"price":0}]'::jsonb;
+alter table public.settings add column if not exists hours_from int not null default 6 check (hours_from between 0 and 23);
+alter table public.settings add column if not exists hours_to int not null default 24 check (hours_to between 1 and 24);
+alter table public.slots add column if not exists sport text not null default 'tennis' check (sport in ('tennis', 'body'));
+alter table public.groups add column if not exists sport text not null default 'tennis' check (sport in ('tennis', 'body'));
+alter table public.extras add column if not exists sport text not null default 'tennis' check (sport in ('tennis', 'body'));
+
+-- Private chat between ONE student and the coach
+create table if not exists public.messages (
+  id uuid primary key default gen_random_uuid(),
+  student_id uuid not null references public.profiles (id) on delete cascade,
+  sender text not null check (sender in ('student', 'coach')),
+  body text not null check (char_length(body) between 1 and 2000),
+  created_at timestamptz not null default now(),
+  read_at timestamptz
+);
+create index if not exists messages_student_idx on public.messages (student_id, created_at);
+
 -- ---------- Rules that keep the timetable consistent ------------------
 create or replace function public.check_booking() returns trigger
 language plpgsql as $$
@@ -208,7 +228,7 @@ language plpgsql as $$
 declare h int;
 begin
   for h in new.start_hour .. (new.start_hour + new.duration - 1) loop
-    if not exists (select 1 from public.slots s where s.weekday = new.weekday and s.hour = h) then
+    if not exists (select 1 from public.slots s where s.weekday = new.weekday and s.hour = h and s.sport = new.sport) then
       raise exception 'hour_not_in_slots';
     end if;
     if exists (select 1 from public.bookings b where b.weekday = new.weekday and b.hour = h) then
@@ -227,7 +247,7 @@ begin
 end;
 $$;
 drop trigger if exists trg_check_group on public.groups;
-create trigger trg_check_group before insert or update of weekday, start_hour, duration on public.groups
+create trigger trg_check_group before insert or update of weekday, start_hour, duration, sport on public.groups
   for each row execute function public.check_group();
 
 create or replace function public.check_slot_delete() returns trigger
@@ -271,6 +291,21 @@ language sql stable security definer set search_path = public as $$
     where s.id = 1 and h >= (b ->> 'from')::int and h < (b ->> 'to')::int
     limit 1
   ), 0);
+$$;
+
+create or replace function public.price_at(h int, p_sport text) returns bigint
+language sql stable security definer set search_path = public as $$
+  select coalesce((
+    select (b ->> 'price')::bigint
+    from public.settings s, jsonb_array_elements(case when p_sport = 'body' then s.bands_body else s.bands end) b
+    where s.id = 1 and h >= (b ->> 'from')::int and h < (b ->> 'to')::int
+    limit 1
+  ), 0);
+$$;
+-- Price of one weekly hour = price band of the sport that hour belongs to
+create or replace function public.price_for_slot(p_weekday int, p_hour int) returns bigint
+language sql stable security definer set search_path = public as $$
+  select public.price_at(p_hour, coalesce((select s.sport from public.slots s where s.weekday = p_weekday and s.hour = p_hour), 'tennis'));
 $$;
 
 -- Which hours are taken (no names, safe to show to everyone)
@@ -317,7 +352,7 @@ declare
   total bigint;
 begin
   if uid is null then raise exception 'not_logged_in'; end if;
-  select coalesce(sum(public.price_at(b.hour)), 0), count(*) into priv, nb
+  select coalesce(sum(public.price_for_slot(b.weekday, b.hour)), 0), count(*) into priv, nb
     from public.bookings b where b.student_id = uid and not b.charged;
   select coalesce(sum(g.price), 0), count(*) into grp, ng
     from public.group_members m join public.groups g on g.id = m.group_id
@@ -362,13 +397,15 @@ create or replace function public.weekday_of(d date) returns int
 language sql immutable as $$ select (extract(dow from d)::int + 1) % 7 $$;
 
 -- Everyone may see extra sessions; the student's identity is shown only to the coach and to that student
+drop function if exists public.get_extras();
 create or replace function public.get_extras()
-returns table (id uuid, date date, hour int, price bigint, note text, booked boolean, student_id uuid, from_booking uuid, makeup_for text)
+returns table (id uuid, date date, hour int, price bigint, note text, booked boolean, student_id uuid, from_booking uuid, makeup_for text, sport text)
 language sql stable security definer set search_path = public as $$
   select e.id, e.date, e.hour, e.price, e.note, e.student_id is not null,
          case when public.is_coach() or e.student_id = auth.uid() then e.student_id end,
          e.from_booking,
-         case when public.is_coach() or e.student_id = auth.uid() then e.makeup_for end
+         case when public.is_coach() or e.student_id = auth.uid() then e.makeup_for end,
+         e.sport
   from public.extras e
   where e.date >= public.local_now()::date - 365;
 $$;
@@ -409,10 +446,11 @@ language sql stable security definer set search_path = public as $$
 $$;
 
 -- Coach creates an extra session; with p_booking it also cancels that student's class on that date
-create or replace function public.offer_extra(p_date date, p_hour int, p_price bigint, p_note text, p_booking uuid, p_credit boolean)
+drop function if exists public.offer_extra(date, int, bigint, text, uuid, boolean);
+create or replace function public.offer_extra(p_date date, p_hour int, p_price bigint, p_note text, p_booking uuid, p_credit boolean, p_sport text default 'tennis')
 returns void
 language plpgsql security definer set search_path = public as $$
-declare b public.bookings%rowtype; cid uuid;
+declare b public.bookings%rowtype; cid uuid; sp text := case when p_sport = 'body' then 'body' else 'tennis' end;
 begin
   if not public.is_coach() then raise exception 'not_allowed'; end if;
   if p_price is null or p_price <= 0 then raise exception 'bad_amount'; end if;
@@ -423,15 +461,16 @@ begin
        or exists (select 1 from public.closed_days c where c.date = p_date) then raise exception 'extra_conflict'; end if;
     if coalesce(p_credit, false) and b.charged then
       insert into public.ledger (student_id, kind, title, amount)
-        values (b.student_id, 'payment', '#sessioncredit', public.price_at(b.hour)) returning id into cid;
+        values (b.student_id, 'payment', '#sessioncredit', public.price_for_slot(b.weekday, b.hour)) returning id into cid;
     end if;
+    select coalesce((select s.sport from public.slots s where s.weekday = b.weekday and s.hour = b.hour), 'tennis') into sp;
     insert into public.session_skips (booking_id, date, day, canceled_by, credit_id)
       values (p_booking, p_date, false, 'coach', cid) on conflict (booking_id, date) do nothing;
   else
     if public.slot_in_use(p_date, p_hour) then raise exception 'extra_conflict'; end if;
   end if;
-  insert into public.extras (date, hour, price, note, from_booking)
-    values (p_date, p_hour, p_price, coalesce(p_note, ''), p_booking);
+  insert into public.extras (date, hour, price, note, from_booking, sport)
+    values (p_date, p_hour, p_price, coalesce(p_note, ''), p_booking, sp);
 end;
 $$;
 
@@ -448,7 +487,7 @@ begin
     cid := null;
     if coalesce(p_credit, false) and b.charged then
       insert into public.ledger (student_id, kind, title, amount, day_ref)
-        values (b.student_id, 'payment', '#sessioncredit', public.price_at(b.hour), p_date) returning id into cid;
+        values (b.student_id, 'payment', '#sessioncredit', public.price_for_slot(b.weekday, b.hour), p_date) returning id into cid;
     end if;
     insert into public.session_skips (booking_id, date, day, canceled_by, credit_id) values (b.id, p_date, true, 'coach', cid);
   end loop;
@@ -511,8 +550,9 @@ begin
      or exists (select 1 from public.closed_days c where c.date = p_date)
      or exists (select 1 from public.extras e where e.date = p_date and e.hour = b.hour) then raise exception 'extra_conflict'; end if;
   insert into public.session_skips (booking_id, date, day, canceled_by) values (p_booking, p_date, false, 'student');
-  insert into public.extras (date, hour, price, note, from_booking)
-    values (p_date, b.hour, public.price_at(b.hour), 'کلاس لغوشده', p_booking);
+  insert into public.extras (date, hour, price, note, from_booking, sport)
+    values (p_date, b.hour, public.price_for_slot(b.weekday, b.hour), 'کلاس لغوشده', p_booking,
+            coalesce((select s.sport from public.slots s where s.weekday = b.weekday and s.hour = b.hour), 'tennis'));
 end;
 $$;
 
@@ -550,8 +590,10 @@ begin
   end if;
   if exists (select 1 from public.extras e where e.makeup_for = p_skip) then raise exception 'extra_taken'; end if;
   if public.slot_in_use(p_date, p_hour) then raise exception 'extra_conflict'; end if;
-  insert into public.extras (date, hour, price, note, student_id, makeup_for, booked_at)
-    values (p_date, p_hour, 0, '', p_student, p_skip, now());
+  insert into public.extras (date, hour, price, note, student_id, makeup_for, booked_at, sport)
+    values (p_date, p_hour, 0, '', p_student, p_skip, now(),
+            coalesce((select s.sport from public.slots sl join public.bookings bk on bk.weekday = sl.weekday and bk.hour = sl.hour
+                      where bk.id = bid limit 1), 'tennis'));
 end;
 $$;
 
@@ -578,6 +620,55 @@ begin
 end;
 $$;
 
+-- Coach turns one weekly hour on/off for a sport (an hour belongs to ONE sport)
+create or replace function public.set_slot(p_weekday int, p_hour int, p_sport text, p_on boolean) returns void
+language plpgsql security definer set search_path = public as $$
+declare ex public.slots%rowtype;
+begin
+  if not public.is_coach() then raise exception 'not_allowed'; end if;
+  if p_sport not in ('tennis', 'body') then raise exception 'bad_sport'; end if;
+  select * into ex from public.slots where weekday = p_weekday and hour = p_hour;
+  if found and ex.sport <> p_sport then raise exception 'slot_other_sport'; end if;
+  if p_on then
+    insert into public.slots (weekday, hour, sport) values (p_weekday, p_hour, p_sport) on conflict (weekday, hour) do nothing;
+  else
+    delete from public.slots where weekday = p_weekday and hour = p_hour;
+  end if;
+end;
+$$;
+
+-- Many hours at once (select all / none / a whole day). Skips hours of the other sport, booked hours and group hours when removing.
+create or replace function public.bulk_slots(p_sport text, p_weekdays int[], p_from int, p_to int, p_on boolean) returns void
+language plpgsql security definer set search_path = public as $$
+begin
+  if not public.is_coach() then raise exception 'not_allowed'; end if;
+  if p_sport not in ('tennis', 'body') then raise exception 'bad_sport'; end if;
+  if p_on then
+    insert into public.slots (weekday, hour, sport)
+      select d, h, p_sport from unnest(p_weekdays) d, generate_series(p_from, p_to - 1) h
+      where d between 0 and 6 and h between 0 and 23
+      on conflict (weekday, hour) do nothing;
+  else
+    delete from public.slots s
+     where s.sport = p_sport and s.weekday = any (p_weekdays) and s.hour >= p_from and s.hour < p_to
+       and not exists (select 1 from public.bookings b where b.weekday = s.weekday and b.hour = s.hour)
+       and not exists (select 1 from public.groups g where g.weekday = s.weekday and s.hour >= g.start_hour and s.hour < g.start_hour + g.duration);
+  end if;
+end;
+$$;
+
+-- Mark the other side's messages as read (coach: p_student = the student; student: ignored)
+create or replace function public.mark_read(p_student uuid) returns void
+language plpgsql security definer set search_path = public as $$
+begin
+  if public.is_coach() then
+    update public.messages set read_at = now() where student_id = p_student and sender = 'student' and read_at is null;
+  elsif auth.uid() is not null then
+    update public.messages set read_at = now() where student_id = auth.uid() and sender = 'coach' and read_at is null;
+  end if;
+end;
+$$;
+
 -- ---------- Who may see / change what ---------------------------------
 alter table public.settings enable row level security;
 alter table public.private_settings enable row level security;
@@ -591,6 +682,7 @@ alter table public.receipts enable row level security;
 alter table public.extras enable row level security;
 alter table public.session_skips enable row level security;
 alter table public.closed_days enable row level security;
+alter table public.messages enable row level security;
 
 drop policy if exists settings_read on public.settings;
 create policy settings_read on public.settings for select using (true);
@@ -653,6 +745,13 @@ create policy skips_read on public.session_skips for select using (
 );
 drop policy if exists skips_write on public.session_skips;
 create policy skips_write on public.session_skips for all using (public.is_coach()) with check (public.is_coach());
+
+drop policy if exists messages_read on public.messages;
+create policy messages_read on public.messages for select using (student_id = auth.uid() or public.is_coach());
+drop policy if exists messages_insert on public.messages;
+create policy messages_insert on public.messages for insert with check (
+  (sender = 'student' and student_id = auth.uid() and not public.is_coach()) or (sender = 'coach' and public.is_coach())
+);
 
 drop policy if exists closed_read on public.closed_days;
 create policy closed_read on public.closed_days for select using (true);

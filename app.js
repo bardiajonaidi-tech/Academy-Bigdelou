@@ -13,10 +13,16 @@ const store = {
 const S = {
   lang: store.get('lang', 'fa'), cal: store.get('cal', 'shamsi'),
   theme: store.get('theme', (window.matchMedia && matchMedia('(prefers-color-scheme: dark)').matches) ? 'dark' : 'light'),
-  route: 'home', tab: null, user: null, pub: null, mine: null, co: null,
+  design: (['a', 'b', 'c', 'd'].includes(store.get('design', 'a')) ? store.get('design', 'a') : 'a'),
+  sport: store.get('sport', 'tennis'), route: 'home', tab: null, user: null, pub: null, mine: null, co: null,
   weekOff: 0, detail: null, modal: null, q: '', gEdit: null, err: '', loading: true
 };
-const HOUR_FROM = 7, HOUR_TO = 22;
+const HOUR_FROM = 6, HOUR_TO = 24;
+const DESIGNS = ['a', 'b', 'c', 'd'];
+const charSrc = n => { const k = n + (S.design === 'b' ? '_p' : '_c'); return (window.CHARS && window.CHARS[k]) || ('img/c/' + k + '.svg'); };
+const charImg = (n, cls) => '<img class="char ' + (cls || '') + '" src="' + charSrc(n) + '" alt="" aria-hidden="true">';
+const heroChar = () => ({a: 'coach_wave', b: 'coach_serve', c: 'coach_serve', d: 'retro'})[S.design] || 'coach_wave';
+const emptyHtml = (txt, ch) => '<div class="empty">' + charImg(ch || 'ball', 'empty-char') + '<p>' + txt + '</p></div>';
 
 const DAYS = {
   fa: ['شنبه','یکشنبه','دوشنبه','سه‌شنبه','چهارشنبه','پنجشنبه','جمعه'],
@@ -32,7 +38,7 @@ fa: {
   site: 'کلاس تنیس', login: 'ورود', register: 'ثبت‌نام', logout: 'خروج', enter_panel: 'ورود به پنل',
   shamsi: 'شمسی', gregorian: 'میلادی',
   hero_t: 'کلاس تنیس با {name}',
-  hero_p: 'ساعت‌های خالی را ببینید، خودتان ثبت‌نام کنید و بدهی و پرداخت‌هایتان را یک‌جا دنبال کنید.',
+  hero_p: '',
   free_hours: 'ساعت‌های خالی هفته', prices: 'قیمت هر جلسه (۱ ساعت)', band_row: 'شروع بین ساعت {from} تا {to}',
   toman: 'تومان', groups_title: 'کلاس‌های گروهی', no_groups: 'فعلاً کلاس گروهی پیشنهاد نشده.',
   contact: 'شماره‌ی مربی', copy: 'کپی', copied: 'کپی شد', not_set: 'هنوز ثبت نشده',
@@ -63,7 +69,13 @@ fa: {
   makeup_owed: 'جلسه‌ی جبرانی طلبکار: {n}', makeup_lbl: 'جبرانی', err_too_late: 'برای لغو، حداقل {n} ساعت به شروع کلاس باید مانده باشد.', cancel_hours: 'حداقل ساعت مانده به کلاس برای لغو توسط شاگرد',
   mk_title: 'جلسه‌ی جبرانی', mk_help: 'این شاگرد {n} جلسه‌ی جبرانی طلب دارد (جلسه‌هایی که لغو کرده و فرد دیگری گرفته). تاریخ و ساعت جلسه‌ی جبرانی را بگذارید.', mk_create: 'ثبت جلسه‌ی جبرانی', ex_save_price: 'ذخیره', ex_from_student: 'از لغو شاگرد', canceled_by_st: 'لغو توسط شاگرد',
   mk_wait: 'مربی تاریخ و ساعتش را مشخص می‌کند.',
+  design_lbl: 'طرح سایت', des_a: 'خاک رس', des_b: 'آرکید پیکسلی', des_c: 'چمن مینیمال', des_d: 'شب نورافکن', des_dark_only: 'این طرح فقط تیره است.',
   theme_to_dark: 'حالت تاریک', theme_to_light: 'حالت روشن',
+  sp_tennis: 'تنیس', sp_body: 'بدنسازی', sport_lbl: 'رشته', prefs: 'تنظیمات نمایش', theme_lbl: 'پوسته', theme_light: 'روشن', theme_dark: 'تاریک', lang_lbl: 'زبان', cal_lbl: 'تقویم', lang_fa: 'فارسی', lang_en: 'English',
+  hours_range: 'بازه‌ی ساعت‌های کاری (ساعت‌هایی که در جدول نشان داده می‌شود)', hr_from: 'از ساعت', hr_to: 'تا ساعت', sel_all: 'انتخاب همه', sel_none: 'هیچ‌کدام', lg_other: 'رشته‌ی دیگر',
+  hrs_help: 'ساعت‌هایی را که می‌خواهید کلاس {sport} داشته باشید آبی کنید. هر کلاس ۱ ساعت است. روی نام هر روز بزنید تا همه‌ی ساعت‌های آن روز انتخاب یا برداشته شود. ساعت‌های رزروشده یا گروهی پاک نمی‌شوند.',
+  err_range: 'ساعت شروع باید از ساعت پایان کمتر باشد.', err_slot_other: 'این ساعت برای رشته‌ی دیگر انتخاب شده است.', set_bands_body: 'قیمت جلسه‌های بدنسازی بر اساس ساعت روز',
+  tab_chat: 'گفتگو با مربی', chat_ph: 'پیام خود را بنویسید…', chat_empty: 'هنوز پیامی نیست. اولین پیام را بفرستید.', chat_private: 'این گفتگو فقط بین شما و مربی است.', chat_private_co: 'این گفتگو فقط بین شما و این شاگرد است.', chat_title: 'گفتگو',
   tab_schedule: 'برنامه‌ی هفته', tab_groups: 'کلاس گروهی', tab_mine: 'کلاس‌ها و پرداخت',
   tap_hint: 'روی یک ساعت سبز بزنید تا آن را هر هفته برای خودتان رزرو کنید. G یعنی کلاس گروهی.',
   book_q: 'رزرو {day} ساعت {hour}؟', book_price: 'هزینه‌ی هر جلسه: {price} تومان', book_note: 'این کلاس هر هفته تکرار می‌شود.',
@@ -107,7 +119,7 @@ en: {
   site: 'Tennis classes', login: 'Log in', register: 'Sign up', logout: 'Log out', enter_panel: 'Open my panel',
   shamsi: 'Shamsi', gregorian: 'Gregorian',
   hero_t: 'Tennis classes with {name}',
-  hero_p: 'See the free hours, sign up by yourself, and follow your balance and payments in one place.',
+  hero_p: '',
   free_hours: 'Free hours this week', prices: 'Price per session (1 hour)', band_row: 'Starting between {from} and {to}',
   toman: 'Toman', groups_title: 'Group classes', no_groups: 'No group classes proposed yet.',
   contact: 'Coach phone', copy: 'Copy', copied: 'Copied', not_set: 'Not set yet',
@@ -138,7 +150,13 @@ en: {
   makeup_owed: 'Make-up sessions owed: {n}', makeup_lbl: 'Make-up', err_too_late: 'You can only cancel at least {n} hours before the class starts.', cancel_hours: 'Minimum hours before class for a student to cancel',
   mk_title: 'Make-up session', mk_help: 'This student is owed {n} make-up session(s) (sessions they canceled that someone else took). Pick a date and hour.', mk_create: 'Schedule make-up session', ex_save_price: 'Save', ex_from_student: 'From student cancellation', canceled_by_st: 'Canceled by student',
   mk_wait: 'Your coach will set the date and hour.',
+  design_lbl: 'Site design', des_a: 'Clay court', des_b: 'Pixel arcade', des_c: 'Fresh grass', des_d: 'Floodlit night', des_dark_only: 'This design is dark only.',
   theme_to_dark: 'Dark mode', theme_to_light: 'Light mode',
+  sp_tennis: 'Tennis', sp_body: 'Bodybuilding', sport_lbl: 'Sport', prefs: 'Display settings', theme_lbl: 'Theme', theme_light: 'Light', theme_dark: 'Dark', lang_lbl: 'Language', cal_lbl: 'Calendar', lang_fa: 'فارسی', lang_en: 'English',
+  hours_range: 'Working-hours range (hours shown in the table)', hr_from: 'From', hr_to: 'To', sel_all: 'Select all', sel_none: 'Select none', lg_other: 'Other sport',
+  hrs_help: 'Turn blue the hours you want to teach {sport}. Each class is 1 hour. Tap a day name to select or clear that whole day. Booked and group hours are never cleared.',
+  err_range: 'The start hour must be before the end hour.', err_slot_other: 'This hour is already used by the other sport.', set_bands_body: 'Bodybuilding session prices by time of day',
+  tab_chat: 'Chat with coach', chat_ph: 'Write your message…', chat_empty: 'No messages yet. Send the first one.', chat_private: 'This chat is only between you and the coach.', chat_private_co: 'This chat is only between you and this student.', chat_title: 'Chat',
   tab_schedule: 'Weekly schedule', tab_groups: 'Group classes', tab_mine: 'My classes & payment',
   tap_hint: 'Tap a green hour to book it every week. G means group class.',
   book_q: 'Book {day} at {hour}?', book_price: 'Price per session: {price} Toman', book_note: 'This class repeats every week.',
@@ -202,8 +220,9 @@ const fullName = p => p ? ((p.first_name || '') + ' ' + (p.last_name || '')).tri
 const rid = () => Math.random().toString(36).slice(2, 10);
 const termWeeks = () => Number(S.pub && S.pub.settings && S.pub.settings.term_weeks) || 12;
 
-function priceAt(h){
-  const b = (S.pub && S.pub.settings && S.pub.settings.bands) || [];
+function priceAt(h, sport){
+  const st = (S.pub && S.pub.settings) || {};
+  const b = (sport === 'body' ? st.bands_body : st.bands) || [];
   for (const x of b) if (h >= x.from && h < x.to) return Number(x.price) || 0;
   return 0;
 }
@@ -217,6 +236,7 @@ function errText(e){
   const m = String((e && (e.message || e.code)) || e || '');
   const c = e && e.code;
   if (c === '23505' || m.includes('duplicate') || m.includes('slot_taken_by_group') || m === 'taken') return t('err_taken');
+  if (m.includes('slot_other_sport')) return t('err_slot_other');
   if (m.includes('too_late')) return t('err_too_late', {n: nfmt((S.pub && S.pub.settings && S.pub.settings.cancel_hours) || 12)});
   if (m.includes('extra_taken')) return t('err_extra_taken');
   if (m.includes('extra_conflict')) return t('err_extra_conflict');
@@ -276,16 +296,26 @@ function buildIcs(items, st){
 }
 
 /* ---------- shared view pieces ---------- */
-const slotSet = () => new Set((S.pub.slots || []).map(s => s.weekday + ':' + s.hour));
+const slotSet = sport => new Set((S.pub.slots || []).filter(s => !sport || (s.sport || 'tennis') === sport).map(s => s.weekday + ':' + s.hour));
+const slotSport = (wd, h) => { const s = (S.pub.slots || []).find(x => x.weekday === wd && x.hour === h); return (s && s.sport) || 'tennis'; };
+const priceOf = (wd, h) => priceAt(h, slotSport(wd, h));
+const hoursRange = () => { const st = (S.pub && S.pub.settings) || {}; const a = st.hours_from == null ? HOUR_FROM : Number(st.hours_from), b = st.hours_to == null ? HOUR_TO : Number(st.hours_to); return a < b ? [a, b] : [HOUR_FROM, HOUR_TO]; };
+const sportTag = sp => sp === 'body' ? '<span class="tag sp-body">' + t('sp_body') + '</span>' : '';
+function sportTabs(){
+  return '<div class="sport-head"><div class="seg" role="group" aria-label="' + t('sport_lbl') + '">' + ['tennis', 'body'].map(k => '<button type="button" data-act="sport" data-v="' + k + '" aria-pressed="' + (S.sport === k) + '">' + charImg(k === 'body' ? 'kettle' : 'ball', 'sp-ic') + t('sp_' + k) + '</button>').join('') + '</div>' + charImg(S.sport === 'body' ? 'lifter' : 'coach_ready', 'sport-char') + '</div>';
+}
+const unreadStudent = () => ((S.mine && S.mine.messages) || []).filter(m => m.sender === 'coach' && !m.read_at).length;
+const unreadFrom = sid => ((S.co && S.co.messages) || []).filter(m => m.sender === 'student' && !m.read_at && (!sid || m.student_id === sid)).length;
+const badgeHtml = (key, n) => '<span class="badge" data-badge="' + key + '"' + (n ? '' : ' hidden') + '>' + nfmt(n) + '</span>';
 const occMap = () => { const m = new Map(); (S.pub.occ || []).forEach(o => m.set(o.weekday + ':' + o.hour, o)); return m; };
 const groupById = id => (S.pub.groups || []).find(g => g.id === id);
 const groupCount = id => Number((S.pub.counts || {})[id] || 0);
 
-function gridHtml(fn){
-  const l = S.lang;
+function gridHtml(fn, opt){
+  const l = S.lang, [hf, ht] = hoursRange();
   let h = '<div class="gridwrap"><div class="grid"><div class="gh"></div>';
-  for (let d = 0; d < 7; d++) h += '<div class="gh">' + DAYS_S[l][d] + '</div>';
-  for (let hr = HOUR_FROM; hr < HOUR_TO; hr++){
+  for (let d = 0; d < 7; d++) h += (opt && opt.dayAct) ? '<button class="gh" data-act="' + opt.dayAct + '" data-wd="' + d + '" aria-label="' + esc(DAYS[l][d]) + '">' + DAYS_S[l][d] + '</button>' : '<div class="gh">' + DAYS_S[l][d] + '</div>';
+  for (let hr = hf; hr < ht; hr++){
     h += '<div class="gl">' + hh(hr) + '</div>';
     for (let d = 0; d < 7; d++){
       const c = fn(d, hr), label = esc(DAYS[l][d] + ' ' + hh(hr));
@@ -296,11 +326,11 @@ function gridHtml(fn){
   return h + '</div></div>';
 }
 function legend(keys){
-  const names = {free: 'lg_free', full: 'lg_full', off: 'lg_off', sel: 'lg_sel', mine: 'lg_mine'};
+  const names = {free: 'lg_free', full: 'lg_full', off: 'lg_off', sel: 'lg_sel', mine: 'lg_mine', other: 'lg_other'};
   return '<div class="legend">' + keys.map(k => '<span><i class="' + k + '"></i>' + t(names[k]) + '</span>').join('') + '</div>';
 }
-function bookingCell(interactive){
-  const slots = slotSet(), occ = occMap();
+function bookingCell(interactive, sport){
+  const slots = slotSet(sport || S.sport), occ = occMap();
   return (d, h) => {
     const key = d + ':' + h;
     if (!slots.has(key)) return {cls: 'off'};
@@ -313,10 +343,11 @@ function bookingCell(interactive){
     return {cls: 'free', act: interactive ? 'cell-free' : ''};
   };
 }
-function pricesCard(){
-  const bands = ((S.pub.settings.bands) || []).filter(b => Number(b.price) > 0);
+function pricesCard(sport){
+  sport = sport || S.sport;
+  const bands = ((sport === 'body' ? S.pub.settings.bands_body : S.pub.settings.bands) || []).filter(b => Number(b.price) > 0);
   if (!bands.length) return '';
-  return '<div class="card"><h3>' + t('prices') + '</h3><div class="list">' + bands.map(b =>
+  return '<div class="card"><h3>' + t('prices') + ' · ' + t('sp_' + sport) + '</h3><div class="list">' + bands.map(b =>
     '<div class="item"><span>' + t('band_row', {from: hh(b.from), to: hh(b.to)}) + '</span><span class="amt">' + nfmt(b.price) + ' ' + t('toman') + '</span></div>').join('') + '</div></div>';
 }
 function groupWhen(g){ return t('group_when', {day: DAYS[S.lang][g.weekday], from: hh(g.start_hour), to: hh(g.start_hour + g.duration)}); }
@@ -329,7 +360,7 @@ function groupCard(g, mode){
     if (joinedRow) act = joinedRow.charged ? '<p class="muted small">' + t('locked') + '</p>' : '<button class="btn block" data-act="leave" data-id="' + esc(g.id) + '">' + t('leave') + '</button>';
     else act = '<button class="btn primary block" data-act="join" data-id="' + esc(g.id) + '"' + ((cap != null && cap - n <= 0) ? ' disabled' : '') + '>' + t('join') + '</button>';
   }
-  return '<div class="card"><div class="row between"><h3>' + esc(g.title) + '</h3>' + (joinedRow ? '<span class="tag ok">' + t('joined') + '</span>' : '') + '</div>' +
+  return '<div class="card"><div class="row between"><h3>' + esc(g.title) + ' ' + sportTag(g.sport) + '</h3>' + (joinedRow ? '<span class="tag ok">' + t('joined') + '</span>' : '') + '</div>' +
     '<p>' + groupWhen(g) + '</p><p class="muted small">' + nfmt(g.price) + ' ' + t('toman') + ' · ' + t('per_session') + ' · ' + left + '</p>' +
     (g.note ? '<p class="small">' + esc(g.note) + '</p>' : '') + act + '</div>';
 }
@@ -350,7 +381,7 @@ function makeupUsed(sk, extras){ return (extras || []).some(e => e.makeup_for ==
 function openExtras(){ return (S.pub.extras || []).filter(e => !e.booked && e.date >= todayIso()).sort((a, b) => (a.date + a.hour).localeCompare(b.date + b.hour, 'en', {numeric: true})); }
 function extraCard(e){
   const mode = S.user && !S.user.isCoach ? 'student' : (S.user ? 'none' : 'visitor');
-  return '<div class="item"><div><div class="t">' + extraWhen(e) + '</div><div class="muted small">' + t('ex_one') + (e.note ? ' · ' + esc(e.note) : '') + '</div></div><div style="text-align:end"><div class="amt">' + nfmt(e.price) + '</div>' +
+  return '<div class="item"><div><div class="t">' + extraWhen(e) + ' ' + sportTag(e.sport) + '</div><div class="muted small">' + t('ex_one') + (e.note ? ' · ' + esc(e.note) : '') + '</div></div><div style="text-align:end"><div class="amt">' + nfmt(e.price) + '</div>' +
     (mode === 'student' ? '<button class="btn sm primary" data-act="ex-ask" data-id="' + esc(e.id) + '">' + t('ex_book') + '</button>' : (mode === 'visitor' ? '<span class="muted small">' + t('ex_login') + '</span>' : '')) + '</div></div>';
 }
 function extrasPublicCard(){
@@ -359,48 +390,62 @@ function extrasPublicCard(){
 }
 function viewTop(){
   const name = (S.pub && S.pub.settings && S.pub.settings.coach_name) || '';
-  const sw = (act, items, cur) => items.map(([v, label]) => '<button class="pill-btn" data-act="' + act + '" data-v="' + v + '" aria-pressed="' + (cur === v) + '">' + label + '</button>').join('');
-  let h = '<header class="topbar"><a class="brand" href="#" data-act="nav" data-route="home" aria-label="' + esc(name || t('site')) + '"><img src="' + ASSET.top + '" alt="' + esc(name || t('site')) + '"></a><div class="top-tools">' +
-    sw('lang', [['fa', 'فا'], ['en', 'EN']], S.lang) + '<button class="pill-btn" data-act="theme" aria-label="' + t(S.theme === 'dark' ? 'theme_to_light' : 'theme_to_dark') + '" title="' + t(S.theme === 'dark' ? 'theme_to_light' : 'theme_to_dark') + '">' + (S.theme === 'dark' ? '☀' : '☾') + '</button>' + sw('cal', [['shamsi', t('shamsi')], ['gregory', t('gregorian')]], S.cal);
+  let h = '<header class="topbar"><a class="brand" href="#" data-act="nav" data-route="home" aria-label="' + esc(name || t('site')) + '"><img src="' + ASSET.top + '" alt="' + esc(name || t('site')) + '"></a><div class="top-tools">';
   if (S.user){
     if (S.route !== 'app') h += '<button class="pill-btn on" data-act="nav" data-route="app">' + t('enter_panel') + '</button>';
     h += '<button class="pill-btn" data-act="logout">' + t('logout') + '</button>';
   } else {
     h += '<button class="pill-btn" data-act="nav" data-route="login">' + t('login') + '</button><button class="pill-btn on" data-act="nav" data-route="register">' + t('register') + '</button>';
   }
+  h += '<button class="pill-btn gear" data-act="prefs" aria-label="' + t('prefs') + '" title="' + t('prefs') + '">⚙</button>';
   return h + '</div></header>';
 }
 function tabsHtml(tabs){
-  return '<nav class="tabs">' + tabs.map(([k, l]) => '<button class="pill-btn" data-act="tab" data-tab="' + k + '" aria-pressed="' + (S.tab === k) + '">' + t(l) + '</button>').join('') + '</nav>';
+  return '<nav class="tabs">' + tabs.map(([k, l]) => '<button class="pill-btn" data-act="tab" data-tab="' + k + '" aria-pressed="' + (S.tab === k) + '">' + t(l) + (k === 'chat' ? badgeHtml('chat', unreadStudent()) : (k === 'students' && S.user && S.user.isCoach ? badgeHtml('students', unreadFrom()) : '')) + '</button>').join('') + '</nav>';
 }
 
 /* ---------- public home ---------- */
 function viewHome(){
   const st = S.pub.settings, name = st.coach_name || '';
-  let h = '<section class="hero"><img class="mark" src="' + ASSET.round + '" alt=""><h1>' + esc(name ? t('hero_t', {name}) : t('site')) + '</h1><p>' + t('hero_p') + '</p>' + (st.bio ? '<p>' + esc(st.bio) + '</p>' : '') +
+  let h = '<section class="hero"><div class="hero-in"><img class="mark" src="' + ASSET.round + '" alt=""><h1>' + esc(name ? t('hero_t', {name}) : t('site')) + '</h1>' + (st.bio ? '<p>' + esc(st.bio) + '</p>' : '') +
     '<div class="row">' + (S.user ? '<button class="btn primary" data-act="nav" data-route="app">' + t('enter_panel') + '</button>' :
-      '<button class="btn primary" data-act="nav" data-route="register">' + t('register') + '</button><button class="btn" data-act="nav" data-route="login">' + t('login') + '</button>') + '</div></section><div class="page">';
+      '<button class="btn primary" data-act="nav" data-route="register">' + t('register') + '</button><button class="btn" data-act="nav" data-route="login">' + t('login') + '</button>') + '</div></div>' + charImg(heroChar(), 'hero-char') + '</section><div class="page">';
   h += '<div class="card"><h3>' + t('contact') + '</h3><div class="row between">' + (st.phone ?
     '<span class="card-num">' + esc(st.phone) + '</span><button class="btn sm" data-act="copy" data-text="' + esc(st.phone) + '">' + t('copy') + '</button>' : '<span class="muted">' + t('not_set') + '</span>') + '</div></div>';
   h += closedBanners() + extrasPublicCard();
-  h += pricesCard();
-  h += '<div class="card"><h3>' + t('free_hours') + '</h3>' + gridHtml(bookingCell(false)) + legend(['free', 'full', 'off']) + '<p class="muted small">' + t('lg_g') + '</p></div>';
+  h += pricesCard('tennis') + pricesCard('body');
+  h += '<div class="card"><h3>' + t('free_hours') + '</h3>' + sportTabs() + gridHtml(bookingCell(false)) + legend(['free', 'full', 'off']) + '<p class="muted small">' + t('lg_g') + '</p></div>';
   h += '<div class="card" style="gap:6px"><h3>' + t('groups_title') + '</h3>' + ((S.pub.groups || []).length ?
-    '<div class="list">' + S.pub.groups.map(g => '<div class="item"><div><div class="t">' + esc(g.title) + '</div><div class="muted small">' + groupWhen(g) + '</div></div><span class="amt">' + nfmt(g.price) + '</span></div>').join('') + '</div>' :
+    '<div class="list">' + S.pub.groups.map(g => '<div class="item"><div><div class="t">' + esc(g.title) + ' ' + sportTag(g.sport) + '</div><div class="muted small">' + groupWhen(g) + '</div></div><span class="amt">' + nfmt(g.price) + '</span></div>').join('') + '</div>' :
     '<p class="muted">' + t('no_groups') + '</p>') + '</div></div>';
   return h;
 }
 
+/* ---------- chat ---------- */
+function chatHtml(msgs, role){
+  if (!msgs.length) return emptyHtml(t('chat_empty'), 'ball');
+  return msgs.map(m => '<div class="msg ' + (m.sender === role ? 'me' : 'them') + '" dir="auto"><div class="mb">' + esc(m.body) + '</div><small>' + fmtDate(new Date(m.created_at), {month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit'}) + '</small></div>').join('');
+}
+function chatMsgs(){
+  if (S.user && S.user.isCoach) return ((S.co && S.co.messages) || []).filter(m => m.student_id === S.detail);
+  return (S.mine && S.mine.messages) || [];
+}
+function chatCard(role){
+  return '<div class="card"><h3>' + t('chat_title') + '</h3><p class="muted small">' + t(role === 'student' ? 'chat_private' : 'chat_private_co') + '</p>' +
+    '<div class="chat-list" id="chatlist" data-role="' + role + '">' + chatHtml(chatMsgs(), role) + '</div>' +
+    '<form class="chat-form" data-form="chat" autocomplete="off"><input class="inp" name="body" maxlength="2000" placeholder="' + t('chat_ph') + '" aria-label="' + t('chat_ph') + '"><button class="btn primary" type="submit">' + t('send') + '</button></form></div>';
+}
+
 /* ---------- login / register ---------- */
 function viewLogin(){
-  return '<div class="page"><div class="card"><h2>' + t('login') + '</h2><form class="form" data-form="login" novalidate>' +
+  return '<div class="page"><div class="card"><div class="auth-char">' + charImg('racket') + '</div><h2>' + t('login') + '</h2><form class="form" data-form="login" novalidate>' +
     '<label for="l_email">' + t('email') + '</label><input class="inp" id="l_email" name="email" type="email" dir="ltr" autocomplete="email">' +
     '<label for="l_pw">' + t('password').replace(/\s*\(.*\)/, '') + '</label><input class="inp" id="l_pw" name="password" type="password" dir="ltr" autocomplete="current-password">' +
     '<p class="err" id="formerr" role="alert"></p><button class="btn primary block" type="submit">' + t('login') + '</button></form>' +
     '<p class="muted small">' + t('no_account') + ' <a href="#" data-act="nav" data-route="register">' + t('register') + '</a></p></div></div>';
 }
 function viewRegister(){
-  return '<div class="page"><div class="card"><h2>' + t('register') + '</h2><form class="form" data-form="register" novalidate>' +
+  return '<div class="page"><div class="card"><div class="auth-char">' + charImg('girl') + charImg('kid') + '</div><h2>' + t('register') + '</h2><form class="form" data-form="register" novalidate>' +
     '<div class="two"><div><label for="r_fn">' + t('first_name') + '</label><input class="inp" id="r_fn" name="first_name" autocomplete="given-name"></div>' +
     '<div><label for="r_ln">' + t('last_name') + '</label><input class="inp" id="r_ln" name="last_name" autocomplete="family-name"></div></div>' +
     '<div class="two"><div><label for="r_age">' + t('age') + '</label><input class="inp" id="r_age" name="age" inputmode="numeric" maxlength="3"></div>' +
@@ -415,18 +460,19 @@ function viewRegister(){
 
 /* ---------- student ---------- */
 function viewStudent(){
-  const tabs = [['schedule', 'tab_schedule'], ['groups', 'tab_groups'], ['mine', 'tab_mine']];
+  const tabs = [['schedule', 'tab_schedule'], ['groups', 'tab_groups'], ['mine', 'tab_mine'], ['chat', 'tab_chat']];
   if (!tabs.some(x => x[0] === S.tab)) S.tab = 'schedule';
   let body;
-  if (S.tab === 'schedule') body = closedBanners() + extrasPublicCard() + '<div class="card"><h3>' + t('free_hours') + '</h3><p class="muted small">' + t('tap_hint') + '</p>' + gridHtml(bookingCell(true)) + legend(['free', 'full', 'off', 'mine']) + '</div>' + pricesCard();
-  else if (S.tab === 'groups') body = (S.pub.groups || []).length ? S.pub.groups.map(g => groupCard(g, 'student')).join('') : '<div class="empty">' + t('no_groups') + '</div>';
+  if (S.tab === 'schedule') body = closedBanners() + extrasPublicCard() + '<div class="card"><h3>' + t('free_hours') + '</h3>' + sportTabs() + '<p class="muted small">' + t('tap_hint') + '</p>' + gridHtml(bookingCell(true)) + legend(['free', 'full', 'off', 'mine']) + '</div>' + pricesCard();
+  else if (S.tab === 'groups'){ const gl = (S.pub.groups || []).filter(g => (g.sport || 'tennis') === S.sport); body = '<div class="card">' + sportTabs() + '</div>' + (gl.length ? gl.map(g => groupCard(g, 'student')).join('') : emptyHtml(t('no_groups'), S.sport === 'body' ? 'girl_lift' : 'kid')); }
+  else if (S.tab === 'chat') body = chatCard('student');
   else body = stMine();
   return tabsHtml(tabs) + '<div class="page">' + body + '</div>';
 }
 function myClasses(){
   const m = S.mine, arr = [];
-  (m.bookings || []).forEach(b => arr.push({kind: 'private', id: b.id, wd: b.weekday, start: b.hour, dur: 1, price: priceAt(b.hour), charged: b.charged, title: t('site')}));
-  (m.members || []).forEach(x => { const g = groupById(x.group_id); if (g) arr.push({kind: 'group', id: g.id, wd: g.weekday, start: g.start_hour, dur: g.duration, price: Number(g.price), charged: x.charged, title: g.title}); });
+  (m.bookings || []).forEach(b => arr.push({kind: 'private', id: b.id, wd: b.weekday, start: b.hour, dur: 1, price: priceOf(b.weekday, b.hour), sport: slotSport(b.weekday, b.hour), charged: b.charged, title: t('sp_' + slotSport(b.weekday, b.hour))}));
+  (m.members || []).forEach(x => { const g = groupById(x.group_id); if (g) arr.push({kind: 'group', id: g.id, wd: g.weekday, start: g.start_hour, dur: g.duration, price: Number(g.price), sport: g.sport || 'tennis', charged: x.charged, title: g.title}); });
   return arr.sort((a, b) => a.wd - b.wd || a.start - b.start);
 }
 function ledgerList(rows){
@@ -437,7 +483,7 @@ function ledgerList(rows){
 }
 function balBox(b, coach){
   const cls = b > 0 ? 'debt' : 'ok';
-  return '<div class="bal ' + cls + '"><span>' + (b > 0 ? t(coach ? 'bal_owed' : 'your_debt') : (b < 0 ? t('credit') : t('paid_off'))) + '</span><span class="big num">' + nfmt(Math.abs(b)) + ' <small style="font-size:13px;font-family:var(--font-body)">' + t('toman') + '</small></span></div>';
+  return '<div class="bal ' + cls + '">' + (cls === 'ok' ? charImg('trophy', 'bal-char') : '') + '<span>' + (b > 0 ? t(coach ? 'bal_owed' : 'your_debt') : (b < 0 ? t('credit') : t('paid_off'))) + '</span><span class="big num">' + nfmt(Math.abs(b)) + ' <small style="font-size:13px;font-family:var(--font-body)">' + t('toman') + '</small></span></div>';
 }
 function receiptList(rows){
   if (!rows || !rows.length) return '<p class="muted">' + t('no_receipts') + '</p>';
@@ -455,7 +501,7 @@ function stMine(){
   if (!cl.length) h += '<p class="muted">' + t('none_yet') + '</p>';
   else {
     h += '<div class="list">' + cl.map(c => '<div class="item"><div><div class="t">' + DAYS[S.lang][c.wd] + ' ' + hh(c.start) + '–' + hh(c.start + c.dur) + '</div><div class="muted small">' +
-      (c.kind === 'group' ? t('group_lbl', {title: esc(c.title)}) : t('tab_schedule')) + ' · ' + nfmt(c.price) + ' ' + t('toman') + '</div></div>' +
+      (c.kind === 'group' ? t('group_lbl', {title: esc(c.title)}) : t('sp_' + c.sport) + ' · ' + t('tab_schedule')) + ' · ' + nfmt(c.price) + ' ' + t('toman') + '</div></div>' +
       (c.charged ? '<div style="display:flex;flex-direction:column;gap:6px;align-items:flex-end"><span class="tag ok">' + t('finalized') + '</span>' + (c.kind === 'private' ? '<button class="btn sm" data-act="sk-ask" data-id="' + esc(c.id) + '">' + t('sk_cancel') + '</button>' : '') + '</div>' : '<button class="btn sm" data-act="' + (c.kind === 'group' ? 'leave' : 'ask-cancel') + '" data-id="' + esc(c.id) + '">' + t('cancel_class') + '</button>') + '</div>').join('') + '</div>' +
       '<div class="row between"><span class="muted">' + t('weekly') + '</span><b class="num">' + nfmt(week) + ' ' + t('toman') + '</b></div>' +
       '<div class="row between"><span class="muted">' + t('monthly', {n: nfmt(termWeeks())}) + '</span><b class="num">' + nfmt(week * termWeeks()) + ' ' + t('toman') + '</b></div>';
@@ -516,7 +562,7 @@ function coEvents(wd, iso){
   all.filter(b => !skipped(b.id, iso)).forEach(b => {
     const last = ev[ev.length - 1];
     if (last && last.kind === 'private' && last.sid === b.student_id && last.end === b.hour){ last.end = b.hour + 1; last.ids.push(b.id); }
-    else ev.push({kind: 'private', sid: b.student_id, ids: [b.id], start: b.hour, end: b.hour + 1, label: t('private_with', {name: esc(fullName(pm[b.student_id]))})});
+    else ev.push({kind: 'private', sid: b.student_id, ids: [b.id], start: b.hour, end: b.hour + 1, label: t('private_with', {name: esc(fullName(pm[b.student_id]))}) + (slotSport(b.weekday, b.hour) === 'body' ? ' · ' + t('sp_body') : '')});
   });
   (S.pub.extras || []).filter(e => e.date === iso).forEach(e => ev.push({kind: 'extra', start: e.hour, end: e.hour + 1, label: t('extracharge') + ' · ' + (e.student_id ? esc(fullName(pm[e.student_id])) : t('ex_open')) + ' · ' + nfmt(e.price)}));
   (S.pub.groups || []).filter(g => g.weekday === wd).forEach(g => {
@@ -541,20 +587,32 @@ function coCalendar(){
   }
   return h + '</div>';
 }
+function rangeOptions(from, to, sel){ let o = ''; for (let h = from; h <= to; h++) o += '<option value="' + h + '"' + (h === sel ? ' selected' : '') + '>' + hh(h) + '</option>'; return o; }
 function coHours(){
-  const st = S.pub.settings, slots = slotSet(), occ = occMap();
-  const cell = (d, hr) => { const k = d + ':' + hr, o = occ.get(k); return {cls: slots.has(k) ? 'sel' : 'off', txt: o ? (o.kind === 'group' ? 'G' : '●') : '', act: 'tog'}; };
+  const st = S.pub.settings, sp = S.sport, mine = slotSet(sp), all = slotSet(), occ = occMap(), [hf, ht] = hoursRange();
+  const cell = (d, hr) => {
+    const k = d + ':' + hr, o = occ.get(k);
+    if (mine.has(k)) return {cls: 'sel', txt: o ? (o.kind === 'group' ? 'G' : '●') : '', act: 'tog'};
+    if (all.has(k)) return {cls: 'other', txt: ''};
+    return {cls: 'off', act: 'tog'};
+  };
   return '<div class="card"><form class="form" data-form="term"><div class="two"><div><label for="t_s">' + t('term_start') + '</label><input class="inp" id="t_s" name="term_start" type="date" value="' + esc(st.term_start || '') + '"></div>' +
     '<div><label for="t_w">' + t('term_weeks') + '</label><input class="inp" id="t_w" name="term_weeks" inputmode="numeric" value="' + esc(nfmt(st.term_weeks || 12)) + '"></div></div>' +
     '<label for="t_c">' + t('cancel_hours') + '</label><input class="inp" id="t_c" name="cancel_hours" inputmode="numeric" value="' + esc(nfmt(st.cancel_hours == null ? 12 : st.cancel_hours)) + '">' +
     '<p class="muted small" id="t_prev">' + (st.term_start ? fmtDate(isoToDate(st.term_start)) : '') + '</p><button class="btn primary" type="submit">' + t('save') + '</button></form></div>' +
-    '<div class="card"><p class="muted small">' + t('hours_help') + '</p>' + gridHtml(cell) + legend(['sel', 'off']) + '<p class="muted small">' + t('dot_hint') + '</p></div>';
+    '<div class="card"><form class="form" data-form="hrange"><label>' + t('hours_range') + '</label><div class="two"><div><label for="hr_f">' + t('hr_from') + '</label><select class="inp" id="hr_f" name="hours_from">' + rangeOptions(0, 23, hf) + '</select></div>' +
+    '<div><label for="hr_t">' + t('hr_to') + '</label><select class="inp" id="hr_t" name="hours_to">' + rangeOptions(1, 24, ht) + '</select></div></div>' +
+    '<p class="err" id="formerr" role="alert"></p><button class="btn" type="submit">' + t('save') + '</button></form></div>' +
+    '<div class="card">' + sportTabs() + '<p class="muted small">' + t('hrs_help', {sport: t('sp_' + sp)}) + '</p>' +
+    '<div class="row"><button class="btn sm" data-act="sel-all">' + t('sel_all') + '</button><button class="btn sm" data-act="sel-none">' + t('sel_none') + '</button></div>' +
+    gridHtml(cell, {dayAct: 'day-toggle'}) + legend(['sel', 'off', 'other']) + '<p class="muted small">' + t('dot_hint') + '</p></div>';
 }
-function hourOptions(sel){ let o = ''; for (let h = HOUR_FROM; h < HOUR_TO; h++) o += '<option value="' + h + '"' + (h === sel ? ' selected' : '') + '>' + hh(h) + '</option>'; return o; }
+function hourOptions(sel){ let o = ''; const [hf, ht] = hoursRange(); for (let h = hf; h < ht; h++) o += '<option value="' + h + '"' + (h === sel ? ' selected' : '') + '>' + hh(h) + '</option>'; return o; }
 function coGroups(){
   const g = S.gEdit ? groupById(S.gEdit) : null, pm = profMap();
   let h = '<div class="card"><h3>' + (g ? t('g_edit') : t('g_new')) + '</h3><p class="muted small">' + t('g_help') + '</p><form class="form" data-form="group" data-id="' + esc(g ? g.id : '') + '">' +
     '<label for="g_t">' + t('g_title') + '</label><input class="inp" id="g_t" name="title" maxlength="60" value="' + esc(g ? g.title : '') + '">' +
+    '<label for="g_sp">' + t('sport_lbl') + '</label><select class="inp" id="g_sp" name="sport">' + ['tennis', 'body'].map(k => '<option value="' + k + '"' + ((g ? (g.sport || 'tennis') : S.sport) === k ? ' selected' : '') + '>' + t('sp_' + k) + '</option>').join('') + '</select>' +
     '<div class="two"><div><label for="g_d">' + t('g_day') + '</label><select class="inp" id="g_d" name="weekday">' + DAYS[S.lang].map((n, i) => '<option value="' + i + '"' + (g && g.weekday === i ? ' selected' : '') + '>' + n + '</option>').join('') + '</select></div>' +
     '<div><label for="g_s">' + t('g_start') + '</label><select class="inp" id="g_s" name="start_hour">' + hourOptions(g ? g.start_hour : 16) + '</select></div></div>' +
     '<div class="two"><div><label for="g_l">' + t('g_dur') + '</label><select class="inp" id="g_l" name="duration">' + [1, 2, 3, 4].map(n => '<option value="' + n + '"' + (g && g.duration === n ? ' selected' : '') + '>' + nfmt(n) + '</option>').join('') + '</select></div>' +
@@ -564,7 +622,7 @@ function coGroups(){
     '<p class="err" id="formerr" role="alert"></p><div class="row"><button class="btn primary grow" type="submit">' + (g ? t('save') : t('g_create')) + '</button>' + (g ? '<button class="btn" type="button" data-act="g-cancel">' + t('cancel') + '</button>' : '') + '</div></form></div>';
   (S.pub.groups || []).forEach(x => {
     const names = (S.co.members || []).filter(m => m.group_id === x.id).map(m => esc(fullName(pm[m.student_id])));
-    h += '<div class="card"><h3>' + esc(x.title) + '</h3><p>' + groupWhen(x) + '</p><p class="muted small">' + nfmt(x.price) + ' ' + t('toman') + ' · ' + t('per_session') + (x.capacity ? ' · ' + nfmt(names.length) + '/' + nfmt(x.capacity) : '') + '</p>' +
+    h += '<div class="card"><h3>' + esc(x.title) + ' ' + sportTag(x.sport) + '</h3><p>' + groupWhen(x) + '</p><p class="muted small">' + nfmt(x.price) + ' ' + t('toman') + ' · ' + t('per_session') + (x.capacity ? ' · ' + nfmt(names.length) + '/' + nfmt(x.capacity) : '') + '</p>' +
       '<p class="small"><b>' + t('g_enrolled') + ':</b> ' + (names.length ? names.join('، ') : t('g_none_enrolled')) + '</p>' +
       '<div class="row"><button class="btn sm" data-act="g-edit" data-id="' + esc(x.id) + '">' + t('save').replace(t('save'), '✎') + '</button><button class="btn sm danger" data-act="g-del" data-id="' + esc(x.id) + '">' + t('g_delete') + '</button></div></div>';
   });
@@ -576,7 +634,8 @@ function coExtras(){
   let h = '<div class="card"><h3>' + t('ex_new') + '</h3><p class="muted small">' + t('ex_help_co') + '</p><form class="form" data-form="extra">' +
     '<div class="two"><div><label for="x_d">' + t('ex_date') + '</label><input class="inp" id="x_d" name="date" type="date" min="' + td + '" value="' + td + '"></div>' +
     '<div><label for="x_h">' + t('ex_hour') + '</label><select class="inp" id="x_h" name="hour">' + hourOptions(16) + '</select></div></div>' +
-    '<label for="x_p">' + t('ex_price') + '</label><input class="inp amt-in" id="x_p" name="price" inputmode="numeric" value="' + esc(nfmt(priceAt(16))) + '">' +
+    '<label for="x_sp">' + t('sport_lbl') + '</label><select class="inp" id="x_sp" name="sport">' + ['tennis', 'body'].map(k => '<option value="' + k + '"' + (S.sport === k ? ' selected' : '') + '>' + t('sp_' + k) + '</option>').join('') + '</select>' +
+    '<label for="x_p">' + t('ex_price') + '</label><input class="inp amt-in" id="x_p" name="price" inputmode="numeric" value="' + esc(nfmt(priceAt(16, S.sport))) + '">' +
     '<label for="x_n">' + t('ex_note') + '</label><input class="inp" id="x_n" name="note" maxlength="120">' +
     '<p class="err" id="formerr" role="alert"></p><button class="btn primary block" type="submit">' + t('ex_create') + '</button></form></div>';
   h += '<div class="card" style="gap:6px"><h3>' + t('extras_title') + '</h3>' + (l.length ? '<div class="list">' + l.map(e => '<div class="item"><div><div class="t">' + extraWhen(e) + '</div><div class="muted small">' + nfmt(e.price) + ' ' + t('toman') + (e.note ? ' · ' + esc(e.note) : '') + '</div></div>' +
@@ -596,9 +655,9 @@ function studentRows(){
   const q = toLatin(S.q).toLowerCase().trim();
   const rows = (S.co.profiles || []).filter(p => !q || (fullName(p) + ' ' + (p.mobile || '')).toLowerCase().includes(q)).map(p => ({p, s: stuStats(p)}))
     .sort((a, b) => b.s.bal - a.s.bal || fullName(a.p).localeCompare(fullName(b.p), 'fa'));
-  if (!rows.length) return '<p class="empty">' + t('s_none') + '</p>';
+  if (!rows.length) return emptyHtml(t('s_none'), 'racket');
   return '<div class="list">' + rows.map(({p, s}) => '<button class="item" data-act="stu" data-id="' + esc(p.id) + '"><div><div class="t">' + esc(fullName(p)) + '</div><div class="muted small">' + t('s_classes') + ': ' + nfmt(s.n) + '</div>' +
-    (s.pend ? '<span class="tag warn">' + t('pending_tag') + '</span>' : '') + '</div>' +
+    (s.pend ? '<span class="tag warn">' + t('pending_tag') + '</span>' : '') + (unreadFrom(p.id) ? ' <span class="badge">' + nfmt(unreadFrom(p.id)) + '</span>' : '') + '</div>' +
     (s.bal > 0 ? '<span class="amt debt">' + nfmt(s.bal) + '</span>' : '<span class="tag ok">' + t('paid_off') + '</span>') + '</button>').join('') + '</div>';
 }
 function coStudents(){
@@ -610,7 +669,7 @@ function coStudents(){
 }
 function weeklyOf(id){
   let w = 0;
-  (S.co.bookings || []).filter(b => b.student_id === id).forEach(b => w += priceAt(b.hour));
+  (S.co.bookings || []).filter(b => b.student_id === id).forEach(b => w += priceOf(b.weekday, b.hour));
   (S.co.members || []).filter(m => m.student_id === id).forEach(m => { const g = groupById(m.group_id); if (g) w += Number(g.price); });
   return w;
 }
@@ -620,7 +679,7 @@ function coDetail(){
   const bs = (S.co.bookings || []).filter(b => b.student_id === p.id), ms = (S.co.members || []).filter(m => m.student_id === p.id);
   const rc = (S.co.receipts || []).filter(r => r.student_id === p.id);
   const tel = n => n ? '<a href="tel:' + esc(n) + '" dir="ltr">' + esc(n) + '</a>' : '—';
-  let h = '<div class="row between"><button class="btn sm" data-act="stu-back">‹ ' + t('back') + '</button><h2>' + esc(fullName(p)) + '</h2></div>' + balBox(bal, true);
+  let h = '<div class="row between"><button class="btn sm" data-act="stu-back">‹ ' + t('back') + '</button><h2>' + esc(fullName(p)) + '</h2></div>' + balBox(bal, true) + chatCard('coach');
   h += '<div class="card"><div class="row between"><span class="muted">' + t('age_lbl') + '</span><b>' + (p.age != null ? nfmt(p.age) : '—') + '</b></div>' +
     '<div class="row between"><span class="muted">' + t('gender_lbl') + '</span><b>' + (p.gender ? t(p.gender) : '—') + '</b></div>' +
     '<div class="row between"><span class="muted">' + t('mobile') + '</span><b>' + tel(p.mobile) + '</b></div>' +
@@ -643,7 +702,7 @@ function coDetail(){
   }
   h += '<div class="card"><h3>' + t('s_classes') + '</h3>';
   if (!bs.length && !ms.length) h += '<p class="muted">' + t('no_classes') + '</p>';
-  else h += '<div class="list">' + bs.sort((a, b) => a.weekday - b.weekday || a.hour - b.hour).map(b => '<div class="item"><div><div class="t">' + DAYS[S.lang][b.weekday] + ' ' + hh(b.hour) + '–' + hh(b.hour + 1) + '</div><div class="muted small">' + nfmt(priceAt(b.hour)) + ' ' + t('toman') + '</div></div><button class="btn sm danger" data-act="co-cancel-b" data-id="' + esc(b.id) + '">' + t('cancel_class') + '</button></div>').join('') +
+  else h += '<div class="list">' + bs.sort((a, b) => a.weekday - b.weekday || a.hour - b.hour).map(b => '<div class="item"><div><div class="t">' + DAYS[S.lang][b.weekday] + ' ' + hh(b.hour) + '–' + hh(b.hour + 1) + '</div><div class="muted small">' + nfmt(priceOf(b.weekday, b.hour)) + ' ' + t('toman') + '</div></div><button class="btn sm danger" data-act="co-cancel-b" data-id="' + esc(b.id) + '">' + t('cancel_class') + '</button></div>').join('') +
     ms.map(m => { const g = groupById(m.group_id); return g ? '<div class="item"><div><div class="t">' + esc(g.title) + '</div><div class="muted small">' + groupWhen(g) + ' · ' + nfmt(g.price) + ' ' + t('toman') + '</div></div><button class="btn sm danger" data-act="co-rm-member" data-id="' + esc(g.id) + '">' + t('cancel_class') + '</button></div>' : ''; }).join('') + '</div>' +
     '<div class="row between"><span class="muted">' + t('weekly_cost') + '</span><b class="num">' + nfmt(weeklyOf(p.id)) + ' ' + t('toman') + '</b></div>' +
     '<button class="btn block" data-act="monthly">' + t('monthly_charge') + ' (' + nfmt(weeklyOf(p.id) * termWeeks()) + ')</button>';
@@ -672,8 +731,10 @@ function coSettings(){
     '<label for="s_p">' + t('set_phone') + '</label><input class="inp" id="s_p" name="phone" type="tel" dir="ltr" maxlength="20" value="' + esc(st.phone) + '">' +
     '<label for="s_c">' + t('set_card') + '</label><input class="inp" id="s_c" name="card_number" dir="ltr" inputmode="numeric" maxlength="24" value="' + esc(pv.card_number || '') + '">' +
     '<label for="s_h">' + t('set_holder') + '</label><input class="inp" id="s_h" name="card_holder" maxlength="60" value="' + esc(pv.card_holder || '') + '"><p class="muted small">' + t('set_card_note') + '</p>' +
-    '<h3 style="margin-top:12px">' + t('set_bands') + '</h3><div id="bands" class="form">' + (st.bands || []).map(bandRow).join('') + '</div>' +
-    '<button class="btn sm" type="button" data-act="add-band" style="align-self:flex-start">+ ' + t('add_band') + '</button>' +
+    '<h3 style="margin-top:12px">' + t('set_bands') + ' · ' + t('sp_tennis') + '</h3><div id="bands" class="form">' + (st.bands || []).map(bandRow).join('') + '</div>' +
+    '<button class="btn sm" type="button" data-act="add-band" data-target="bands" style="align-self:flex-start">+ ' + t('add_band') + '</button>' +
+    '<h3 style="margin-top:12px">' + t('set_bands_body') + '</h3><div id="bands_body" class="form">' + (st.bands_body || []).map(bandRow).join('') + '</div>' +
+    '<button class="btn sm" type="button" data-act="add-band" data-target="bands_body" style="align-self:flex-start">+ ' + t('add_band') + '</button>' +
     '<button class="btn primary block" type="submit" style="margin-top:12px">' + t('save') + '</button></form></div>';
 }
 
@@ -682,7 +743,7 @@ function viewModal(){
   const m = S.modal; if (!m) return '';
   let b = '';
   if (m.type === 'book'){
-    b = '<h3>' + t('book_q', {day: DAYS[S.lang][m.wd], hour: hh(m.h)}) + '</h3><p>' + t('book_price', {price: nfmt(priceAt(m.h))}) + '</p><p class="muted small">' + t('book_note') + '</p>' +
+    b = '<h3>' + t('book_q', {day: DAYS[S.lang][m.wd], hour: hh(m.h)}) + '</h3><p>' + t('book_price', {price: nfmt(priceOf(m.wd, m.h))}) + '</p><p class="muted small">' + t('book_note') + '</p>' +
       '<div class="row"><button class="btn primary grow" data-act="do-book">' + t('confirm') + '</button><button class="btn" data-act="close-modal">' + t('cancel') + '</button></div>';
   } else if (m.type === 'cancel'){
     const bk = (S.mine.bookings || []).find(x => x.weekday === m.wd && x.hour === m.h);
@@ -696,6 +757,14 @@ function viewModal(){
     const e = (S.pub.extras || []).find(x => x.id === m.id);
     b = e ? '<h3>' + t('ex_book_q') + '</h3><p>' + extraWhen(e) + '</p><p><b>' + nfmt(e.price) + ' ' + t('toman') + '</b> · ' + t('ex_one') + '</p><p class="muted small">' + t('ex_charge_now') + '</p>' +
       '<div class="row"><button class="btn primary grow" data-act="ex-book" data-id="' + esc(e.id) + '">' + t('confirm') + '</button><button class="btn" data-act="close-modal">' + t('cancel') + '</button></div>' : '';
+  } else if (m.type === 'prefs'){
+    const row = (label, act, cur, items) => '<div class="pref-row"><span>' + label + '</span><div class="seg">' + items.map(([v, l]) => '<button type="button" data-act="' + act + '" data-v="' + v + '" aria-pressed="' + (cur === v) + '">' + l + '</button>').join('') + '</div></div>';
+    const SW = {a: ['#b8441a', '#ffc873', '#fff6ec'], b: ['#0f1b2d', '#ffd23f', '#e2582b'], c: ['#f6f7f0', '#1f7a4d', '#d9f04a'], d: ['#0a1712', '#e4ff3a', '#17382a']};
+    const dsg = '<div class="pref-col"><span>' + t('design_lbl') + '</span><div class="des-grid">' + DESIGNS.map(k => '<button type="button" class="des" data-act="design-set" data-v="' + k + '" aria-pressed="' + (S.design === k) + '"><span class="sw">' + SW[k].map(c => '<i style="background:' + c + '"></i>').join('') + '</span>' + charImg(k === 'b' ? 'ball' : (k === 'd' ? 'retro' : (k === 'c' ? 'kid' : 'coach_wave')), 'des-ch') + '<b>' + t('des_' + k) + '</b></button>').join('') + '</div></div>';
+    const themeRow = (S.design === 'b' || S.design === 'd') ? '<div class="pref-row"><span>' + t('theme_lbl') + '</span><span class="muted small">' + t('des_dark_only') + '</span></div>' : row(t('theme_lbl'), 'theme-set', S.theme, [['light', '☀ ' + t('theme_light')], ['dark', '☾ ' + t('theme_dark')]]);
+    b = '<h3>⚙ ' + t('prefs') + '</h3>' + dsg + themeRow +
+      row(t('lang_lbl'), 'lang', S.lang, [['fa', t('lang_fa')], ['en', t('lang_en')]]) + row(t('cal_lbl'), 'cal', S.cal, [['shamsi', t('shamsi')], ['gregory', t('gregorian')]]) +
+      '<button class="btn block" data-act="close-modal">' + t('close') + '</button>';
   } else if (m.type === 'skpick'){
     const bk = (S.mine.bookings || []).find(x => x.id === m.bid), nh = S.pub.settings.cancel_hours == null ? 12 : S.pub.settings.cancel_hours, opts = [];
     if (bk){
@@ -717,7 +786,7 @@ function viewModal(){
       '<p class="err" id="formerr" role="alert"></p><div class="row"><button class="btn danger grow" type="submit">' + t('cancel_day_go') + '</button><button class="btn" type="button" data-act="close-modal">' + t('close') + '</button></div></form>';
   } else if (m.type === 'offer'){
     b = '<h3>' + t('offer_q') + '</h3><p>' + fmtDate(isoToDate(m.iso), {weekday: 'long', month: 'long', day: 'numeric'}) + ' · ' + hh(m.start) + '–' + hh(m.end) + '</p>' +
-      '<form class="form" data-form="offer"><label for="o_p">' + t('offer_price') + '</label><input class="inp amt-in" id="o_p" name="price" inputmode="numeric" value="' + esc(nfmt(priceAt(m.start))) + '">' +
+      '<form class="form" data-form="offer"><label for="o_p">' + t('offer_price') + '</label><input class="inp amt-in" id="o_p" name="price" inputmode="numeric" value="' + esc(nfmt((() => { const bk0 = (S.co.bookings || []).find(x => x.id === m.ids[0]); return bk0 ? priceOf(bk0.weekday, bk0.hour) : priceAt(m.start); })())) + '">' +
       '<label for="o_n">' + t('ex_note') + '</label><input class="inp" id="o_n" name="note" maxlength="120">' +
       '<label style="display:flex;gap:8px;align-items:center;color:var(--ink)"><input type="checkbox" name="credit" checked> ' + t('offer_credit') + '</label>' +
       '<p class="err" id="formerr" role="alert"></p><div class="row"><button class="btn primary grow" type="submit">' + t('offer_go') + '</button><button class="btn" type="button" data-act="close-modal">' + t('close') + '</button></div></form>';
@@ -743,6 +812,7 @@ function render(){
   const root = $('#app'); if (!root) return;
   const y = window.scrollY;
   document.documentElement.setAttribute('data-theme', S.theme);
+  document.documentElement.setAttribute('data-design', S.design);
   document.documentElement.lang = S.lang;
   document.documentElement.dir = S.lang === 'fa' ? 'rtl' : 'ltr';
   const nm = S.pub && S.pub.settings && S.pub.settings.coach_name;
@@ -758,6 +828,7 @@ function render(){
   } else body = viewHome();
   root.innerHTML = '<div class="wrap">' + viewTop() + (API.isPreview ? '<p class="banner" style="margin-top:10px">' + t('demo_banner') + '</p>' : '') + body + '</div>' + viewModal();
   hydrateImages();
+  paintChat(); markIfNeeded();
   window.scrollTo(0, y);
 }
 async function refreshData(){
@@ -797,6 +868,12 @@ document.addEventListener('click', async e => {
   if (el.tagName === 'A') e.preventDefault();
   switch (a){
     case 'theme': S.theme = S.theme === 'dark' ? 'light' : 'dark'; store.set('theme', S.theme); render(); break;
+    case 'prefs': S.modal = {type: 'prefs'}; render(); break;
+    case 'design-set': S.design = d.v; store.set('design', S.design); render(); break;
+    case 'theme-set': S.theme = d.v; store.set('theme', S.theme); render(); break;
+    case 'sport': S.sport = d.v; store.set('sport', S.sport); render(); break;
+    case 'sel-all': case 'sel-none': await doAct(() => API.bulkSlots(S.sport, [0, 1, 2, 3, 4, 5, 6], hoursRange()[0], hoursRange()[1], a === 'sel-all'), 'saved'); break;
+    case 'day-toggle': { const [hf, ht] = hoursRange(), mine = slotSet(S.sport); let full = true; for (let h = hf; h < ht; h++) if (!mine.has(d.wd + ':' + h)) full = false; await doAct(() => API.bulkSlots(S.sport, [+d.wd], hf, ht, !full), 'saved'); break; }
     case 'lang': S.lang = d.v; store.set('lang', S.lang); render(); break;
     case 'cal': S.cal = d.v; store.set('cal', S.cal); render(); break;
     case 'nav': S.route = d.route; S.modal = null; S.detail = null; render(); window.scrollTo(0, 0); break;
@@ -841,7 +918,7 @@ document.addEventListener('click', async e => {
     case 'sk-withdraw': await doAct(() => API.restoreMySession(d.bid, d.iso), 'saved'); break;
     case 'ex-price': { const pr = parseAmt(($('#xp_' + d.id) || {}).value); if (!pr){ toast(t('err_bad_amount')); break; } await doAct(() => API.updateExtraPrice(d.id, pr), 'saved'); break; }
     case 'copy': try { await navigator.clipboard.writeText(d.text); toast(t('copied')); } catch (x) { toast(d.text); } break;
-    case 'tog': { const on = !slotSet().has(d.wd + ':' + d.h); await doAct(() => API.toggleSlot(+d.wd, +d.h, on)); break; }
+    case 'tog': { const on = !slotSet(S.sport).has(d.wd + ':' + d.h); await doAct(() => API.toggleSlot(+d.wd, +d.h, on, S.sport)); break; }
     case 'wk': S.weekOff = d.v === '0' ? 0 : S.weekOff + Number(d.v); render(); break;
     case 'g-edit': S.gEdit = d.id; render(); window.scrollTo(0, 0); break;
     case 'g-cancel': S.gEdit = null; render(); break;
@@ -858,7 +935,7 @@ document.addEventListener('click', async e => {
     case 'co-cancel-b': await doAct(() => API.cancelBookingCoach(d.id), 'canceled'); break;
     case 'co-rm-member': await doAct(() => API.removeMember(d.id, S.detail), 'canceled'); break;
     case 'ld-del': arm(el, () => doAct(() => API.deleteLedger(d.id), 'g_deleted')); break;
-    case 'add-band': $('#bands').insertAdjacentHTML('beforeend', bandRow(null)); break;
+    case 'add-band': $('#' + (d.target || 'bands')).insertAdjacentHTML('beforeend', bandRow(null)); break;
     case 'rm-band': el.closest('.band').remove(); break;
   }
 });
@@ -889,12 +966,20 @@ document.addEventListener('submit', async e => {
     } else if (k === 'group'){
       const start = +v('start_hour'), dur = +v('duration');
       if (!v('title') || start + dur > 24) return err(t('err_required'));
-      await API.saveGroup({id: f.dataset.id || null, title: v('title'), weekday: +v('weekday'), start_hour: start, duration: dur, price: parseAmt(v('price')), capacity: parseIntOr(v('capacity'), 0) || null, note: v('note')});
+      await API.saveGroup({id: f.dataset.id || null, title: v('title'), sport: v('sport') || 'tennis', weekday: +v('weekday'), start_hour: start, duration: dur, price: parseAmt(v('price')), capacity: parseIntOr(v('capacity'), 0) || null, note: v('note')});
       S.gEdit = null; await refreshData(); render(); toast(t('saved'));
     } else if (k === 'extra'){
       const price = parseAmt(v('price')); if (!v('date') || !price) return err(t('err_bad_amount'));
-      await API.offerExtra({date: v('date'), hour: +v('hour'), price, note: v('note')});
+      await API.offerExtra({date: v('date'), hour: +v('hour'), price, note: v('note'), sport: v('sport') || 'tennis'});
       await refreshData(); render(); toast(t('saved'));
+    } else if (k === 'hrange'){
+      const hf = +v('hours_from'), ht = +v('hours_to'); if (!(hf < ht)) return err(t('err_range'));
+      await API.saveSettings({pub: {hours_from: hf, hours_to: ht}});
+      await refreshData(); render(); toast(t('saved'));
+    } else if (k === 'chat'){
+      const body = v('body'); if (!body) return;
+      const sid = S.user.isCoach ? S.detail : S.user.id;
+      f.reset(); await API.sendMessage(sid, body); await pullChat(true);
     } else if (k === 'makeup'){
       await API.assignMakeup({student_id: S.detail, date: v('date'), hour: +v('hour'), skip: f.dataset.skip});
       await refreshData(); render(); toast(t('saved'));
@@ -911,14 +996,19 @@ document.addEventListener('submit', async e => {
       await API.saveSettings({pub: {term_start: v('term_start') || null, term_weeks: Math.min(60, Math.max(1, wk)), cancel_hours: Math.min(168, Math.max(0, parseIntOr(v('cancel_hours'), 12)))}});
       await refreshData(); render(); toast(t('saved'));
     } else if (k === 'settings'){
-      const bands = [];
-      for (const r of document.querySelectorAll('#bands .band')){
-        const from = parseIntOr(r.querySelector('[data-f="from"]').value, NaN), to = parseIntOr(r.querySelector('[data-f="to"]').value, NaN), price = parseAmt(r.querySelector('[data-f="price"]').value);
-        if (isNaN(from) && isNaN(to) && !price) continue;
-        if (isNaN(from) || isNaN(to) || from >= to || to > 24) return toast(t('err_required'));
-        bands.push({from, to, price});
-      }
-      await API.saveSettings({pub: {coach_name: v('coach_name'), bio: v('bio'), phone: toLatin(v('phone')), bands}, priv: {card_number: toLatin(v('card_number')), card_holder: v('card_holder')}});
+      const readBands = sel => {
+        const out = [];
+        for (const r of document.querySelectorAll(sel + ' .band')){
+          const from = parseIntOr(r.querySelector('[data-f="from"]').value, NaN), to = parseIntOr(r.querySelector('[data-f="to"]').value, NaN), price = parseAmt(r.querySelector('[data-f="price"]').value);
+          if (isNaN(from) && isNaN(to) && !price) continue;
+          if (isNaN(from) || isNaN(to) || from >= to || to > 24) return null;
+          out.push({from, to, price});
+        }
+        return out;
+      };
+      const bands = readBands('#bands'), bands_body = readBands('#bands_body');
+      if (!bands || !bands_body) return toast(t('err_required'));
+      await API.saveSettings({pub: {coach_name: v('coach_name'), bio: v('bio'), phone: toLatin(v('phone')), bands, bands_body}, priv: {card_number: toLatin(v('card_number')), card_holder: v('card_holder')}});
       await refreshData(); render(); toast(t('saved'));
     } else if (k === 'ledger'){
       const amount = parseAmt(v('amount')), kind = (e.submitter && e.submitter.value) || 'charge';
@@ -940,6 +1030,40 @@ document.addEventListener('input', e => {
   else if (el.id === 'r_age'){ const a = parseIntOr(el.value, NaN), h = $('#pm_hint'); if (h) h.textContent = '(' + (!isNaN(a) && a < 18 ? t('parent_req') : t('parent_opt')) + ')'; }
   else if (el.id === 't_s'){ const p = $('#t_prev'); if (p) p.textContent = el.value ? fmtDate(isoToDate(el.value)) : ''; }
 });
+
+/* ---------- chat runtime ---------- */
+let markBusy = false;
+function chatVisible(){ return !!S.user && S.route === 'app' && (S.user.isCoach ? (S.tab === 'students' && !!S.detail) : S.tab === 'chat'); }
+function updateBadges(){
+  const set = (key, n) => document.querySelectorAll('[data-badge="' + key + '"]').forEach(e => { e.textContent = nfmt(n); e.hidden = !n; });
+  if (S.user && S.user.isCoach) set('students', unreadFrom()); else set('chat', unreadStudent());
+}
+function paintChat(){
+  const el = $('#chatlist'); if (!el) return;
+  const near = el.scrollHeight - el.scrollTop - el.clientHeight < 80;
+  el.innerHTML = chatHtml(chatMsgs(), el.dataset.role);
+  if (near || !el.dataset.painted) el.scrollTop = el.scrollHeight;
+  el.dataset.painted = '1';
+}
+async function markIfNeeded(){
+  if (markBusy || !chatVisible()) return;
+  const coach = S.user.isCoach, sid = coach ? S.detail : S.user.id;
+  const list = coach ? ((S.co.messages || []).filter(m => m.student_id === sid && m.sender === 'student' && !m.read_at)) : ((S.mine.messages || []).filter(m => m.sender === 'coach' && !m.read_at));
+  if (!list.length) return;
+  markBusy = true;
+  try { await API.markRead(sid); const t0 = new Date().toISOString(); list.forEach(m => m.read_at = t0); updateBadges(); } catch (e) {}
+  markBusy = false;
+}
+async function pullChat(force){
+  if (!S.user || (S.route !== 'app')) return;
+  try {
+    if (S.user.isCoach){ if (!S.co) return; S.co.messages = await API.getMessages(null); }
+    else { if (!S.mine) return; S.mine.messages = await API.getMessages(S.user.id); }
+  } catch (e) { return; }
+  paintChat(); updateBadges(); markIfNeeded();
+}
+let pollN = 0;
+setInterval(() => { if (document.hidden || !S.user) return; pollN++; if (chatVisible() || pollN % 6 === 0 || false) pullChat(); }, 5000);
 
 /* ---------- start ---------- */
 async function start(route){

@@ -119,11 +119,11 @@ window.API = {
   /* ----- student ----- */
   async getMine(){
     const id = uid(), f = 'student_id=eq.' + q(id);
-    const [prof, bookings, members, extras, skips, ledger, receipts, card] = await Promise.all([
+    const [prof, bookings, members, extras, skips, ledger, receipts, card, messages] = await Promise.all([
       sel('profiles', 'id=eq.' + q(id)), sel('bookings', f + '&order=weekday.asc,hour.asc'), sel('group_members', f),
       sel('extras', f), sel('session_skips', 'order=date.asc'), sel('ledger', f + '&order=created_at.asc'),
-      sel('receipts', f + '&order=created_at.desc'), rpc('get_card_info')]);
-    return {profile: prof[0] || null, bookings, members, extras, skips: (skips || []).map(withBy), ledger, receipts, card: (card && card[0]) || null};
+      sel('receipts', f + '&order=created_at.desc'), rpc('get_card_info'), sel('messages', f + '&order=created_at.asc')]);
+    return {profile: prof[0] || null, bookings, members, extras, skips: (skips || []).map(withBy), ledger, receipts, messages: messages || [], card: (card && card[0]) || null};
   },
   async book(weekday, hour){ await ins('bookings', {student_id: uid(), weekday, hour}); },
   async cancelBooking(id){ await del('bookings', 'id=eq.' + q(id)); },
@@ -148,17 +148,15 @@ window.API = {
   /* ----- coach ----- */
   async getCoach(){
     const me = uid();
-    const [profiles, bookings, members, ledger, receipts, skips, priv] = await Promise.all([
+    const [profiles, bookings, members, ledger, receipts, skips, priv, messages] = await Promise.all([
       sel('profiles', 'order=first_name.asc'), sel('bookings'), sel('group_members'),
-      sel('ledger', 'order=created_at.asc'), sel('receipts', 'order=created_at.desc'), sel('session_skips', 'order=date.asc'), sel('private_settings', 'id=eq.1')]);
-    return {profiles: profiles.filter(p => p.id !== me), bookings, members, ledger, receipts, skips: (skips || []).map(withBy), priv: priv[0] || {}};
+      sel('ledger', 'order=created_at.asc'), sel('receipts', 'order=created_at.desc'), sel('session_skips', 'order=date.asc'), sel('private_settings', 'id=eq.1'), sel('messages', 'order=created_at.asc')]);
+    return {profiles: profiles.filter(p => p.id !== me), bookings, members, ledger, receipts, skips: (skips || []).map(withBy), messages: messages || [], priv: priv[0] || {}};
   },
-  async toggleSlot(weekday, hour, on){
-    if (on) await rest('slots?on_conflict=weekday,hour', {method: 'POST', json: {weekday, hour}, headers: {Prefer: 'resolution=ignore-duplicates,return=minimal'}});
-    else await del('slots', 'weekday=eq.' + weekday + '&hour=eq.' + hour);
-  },
+  toggleSlot(weekday, hour, on, sport){ return rpc('set_slot', {p_weekday: weekday, p_hour: hour, p_sport: sport || 'tennis', p_on: !!on}); },
+  bulkSlots(sport, weekdays, from, to, on){ return rpc('bulk_slots', {p_sport: sport || 'tennis', p_weekdays: weekdays, p_from: from, p_to: to, p_on: !!on}); },
   async saveGroup(g){
-    const row = {title: g.title, weekday: g.weekday, start_hour: g.start_hour, duration: g.duration, price: g.price || 0, capacity: g.capacity || null, note: g.note || ''};
+    const row = {title: g.title, sport: g.sport === 'body' ? 'body' : 'tennis', weekday: g.weekday, start_hour: g.start_hour, duration: g.duration, price: g.price || 0, capacity: g.capacity || null, note: g.note || ''};
     if (g.id) await upd('groups', 'id=eq.' + q(g.id), row); else await ins('groups', row);
   },
   async deleteGroup(id){ await del('groups', 'id=eq.' + q(id)); },
@@ -172,12 +170,20 @@ window.API = {
   async decideReceipt(id, amount, accept){ await rpc('decide_receipt', {p_id: id, p_amount: amount, p_accept: !!accept}); },
   async cancelBookingCoach(id){ await del('bookings', 'id=eq.' + q(id)); },
   async removeMember(gid, sid){ await del('group_members', 'group_id=eq.' + q(gid) + '&student_id=eq.' + q(sid)); },
-  offerExtra(x){ return rpc('offer_extra', {p_date: x.date, p_hour: x.hour, p_price: x.price, p_note: x.note || '', p_booking: x.booking_id || null, p_credit: !!x.credit}); },
+  offerExtra(x){ return rpc('offer_extra', {p_date: x.date, p_hour: x.hour, p_price: x.price, p_note: x.note || '', p_booking: x.booking_id || null, p_credit: !!x.credit, p_sport: x.sport === 'body' ? 'body' : 'tennis'}); },
   cancelDay(date, note, credit){ return rpc('cancel_day', {p_date: date, p_note: note || '', p_credit: !!credit}); },
   restoreDay(date){ return rpc('restore_day', {p_date: date}); },
   restoreSession(bid, date){ return rpc('restore_session', {p_booking: bid, p_date: date}); },
   assignMakeup(x){ return rpc('assign_makeup', {p_student: x.student_id, p_date: x.date, p_hour: x.hour, p_skip: x.skip}); },
   updateExtraPrice(id, price){ return rpc('update_extra_price', {p_id: id, p_price: price}); },
-  deleteExtra(id){ return rpc('delete_extra', {p_id: id}); }
+  deleteExtra(id){ return rpc('delete_extra', {p_id: id}); },
+
+  /* ----- private chat (one student <-> coach) ----- */
+  async getMessages(studentId){ return sel('messages', (studentId ? 'student_id=eq.' + q(studentId) + '&' : '') + 'order=created_at.asc'); },
+  async sendMessage(studentId, body){
+    const coach = await isCoach();
+    await ins('messages', {student_id: coach ? studentId : uid(), sender: coach ? 'coach' : 'student', body: String(body).slice(0, 2000)});
+  },
+  markRead(studentId){ return rpc('mark_read', {p_student: studentId || null}); }
 };
 })();
